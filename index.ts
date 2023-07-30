@@ -4,8 +4,7 @@ import express, { Express, Request, Response } from "express";
 import { connectToDB } from './config/db';
 const socketio = require('socket.io')
 import http from 'http'
-import path from 'path'
-
+import { Chat } from './model/chat.model';
 
 const app:Express = express();
 
@@ -21,11 +20,15 @@ io.on('connection', (socket: any)=>{
     socket.on('join_room', (data: {roomId: 'string'})=>{
         console.log("Joined a room", data.roomId);
         socket.join(data.roomId);
-
     });
 
     socket.on('msg_send', async(data: {msg: string, username: string, roomId: string})=>{
         console.log("data", data);
+        const chat = await Chat.create({
+            user: data.username,
+            content: data.msg,
+            roomId: data.roomId
+        })
         io.to(data.roomId).emit('msg_rcvd', data)
     });
 });
@@ -33,8 +36,12 @@ io.on('connection', (socket: any)=>{
 
 
 app.get('/chat/:roomId', async(req:Request, res:Response)=>{
+    const chats = await Chat.find({
+        roomId: req.params.roomId
+    })
     res.render('chat', {
-        id: req.params.roomId
+        id: req.params.roomId,
+        chats
     })
 })
 
